@@ -1,0 +1,21 @@
+<div class="footer-col-wrapper">
+
+  <div class="footer-col">
+    <div class="copyright">
+      {% assign year_from = site.posts[-1].date | date: '%Y' %}
+      {% assign year_to   = site.time | date: '%Y' %}
+      {% if year_from == nil or year_from == year_to %}
+        {% assign year_string = year_from %}
+      {% else %}
+        {% assign year_string = year_from | append: '&nbsp;' | append: '-' | append: '&nbsp;' | append: year_to %}
+      {% endif %}
+      {% if site.author %}
+      <p>Copyright © {{ year_string }} {{ site.author }}; All rights reserved.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="footer-col">
+    <p>Let me know via email if you have any feedback on this site.</p>
+  </div>
+</div>

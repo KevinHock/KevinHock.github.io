@@ -1,0 +1,39 @@
+repository: KevinHock/KevinHock.github.io
+
+title: Security
+author: Kevin Hock
+avatar: /logo.jpeg
+email: kevin.hock.opentoall@gmail.com
+skin: sunrise
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-paginate
+
+paginate: 10
+
+# Uncomment the below line and set the tracking ID for enabling Google Analytics
+# 
+# google_analytics: 
+
+# Uncomment the below lines and set the Disqus shortname for enabling Disqus
+# 
+# disqus:
+
+# Jekyll
+# ======
+exclude:
+  - scripts/
+  - vendor/
+  - README.md
+  - jekyll-theme-hamilton.gemspec
+
+# Jekyll SEO Tag (Optional)
+# =========================
+logo: logo.jpeg
+social:
+  name: Kevin Hock
+  links:
+    - https://github.com/KevinHock
+lang: en
