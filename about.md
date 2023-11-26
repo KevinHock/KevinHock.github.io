@@ -4,4 +4,4 @@ title: About
 permalink: /about/
 ---
 
-A blog about security..
+A blog about security.
