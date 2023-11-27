@@ -102,7 +102,7 @@ The reason for this is as follows. When you make an interface VPC endpoint with 
 
 However, suppose you are willing to do a lot of heavy lifting that is orthogonal to AWS primitives.
 
-In that case, you _can_ use these with [a proxy](https://eng.lyft.com/internet-egress-filtering-of-services-at-lyft-72e99e29a4d9) to accomplish centralized egress. This works because the destination IP of outbound traffic won't be the Internet, but a private IP, due to deploying, e.g., iptables to re-route Internet-destined traffic on every host.
+In that case, you _can_ use these with [an outbound proxy](https://eng.lyft.com/internet-egress-filtering-of-services-at-lyft-72e99e29a4d9) to accomplish centralized egress. This works because the destination IP of outbound traffic won't be the Internet, but a private IP, due to deploying, e.g., iptables to re-route Internet-destined traffic on every host.
 
 Some reasons you may not want to do this are:
 - Significant effort
@@ -116,7 +116,7 @@ With that said, AWS does not have a primitive to perform Egress filtering,[^99] 
 
 [^985]: A peering connection cannot be selected as a [traffic mirror source or target](https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-targets.html), but a network interface can. However, only an ENI belonging to an EC2 instance can be a mirror source, not an ENI belonging to an Interface endpoint. The documentation doesn't mention this anywhere I could find.
 
-[^99]: It has [AWS Network Firewall](https://aws.amazon.com/network-firewall/faqs/), which can be fooled via SNI spoofing. So it is, at best, a stepping stone to keep an inventory of your Egress traffic if you can’t get a proxy up and running short-term and are not using TLS 1.3 with encrypted client hello (ECH) or encrypted SNI (ESNI). I cringe at how [the FAQ](https://aws.amazon.com/network-firewall/faqs/) says these are not supported rather than a bypass of the product. Sadly, this euphemism [isn't unique to AWS](https://i.imgur.com/dPyFaNK.png).
+[^99]: It has [AWS Network Firewall](https://aws.amazon.com/network-firewall/faqs/), which is [just managed Suricata](https://docs.suricata.io/en/latest/rules/tls-keywords.html) and can be fooled via SNI spoofing. So it is, at best, a stepping stone to keep an inventory of your Egress traffic if you can’t get a proxy or real firewall running short-term and [are not using TLS 1.3 with encrypted client hello (ECH) or encrypted SNI (ESNI)](https://docs.aws.amazon.com/network-firewall/latest/developerguide/tls-inspection-considerations.html).
 
 ### Option 3: Centralized Egress via Gateway Load Balancer (GWLB) with Firewall
 
@@ -130,8 +130,6 @@ Gateway Load Balancer endpoint ENIs _have this check disabled_  to support their
 
 ![alt text](https://i.imgur.com/tIQaTa0.png)
 (No NAT Gateway is necessary here, as the firewall is running in a public subnet and performing NAT. [AWS](https://aws.amazon.com/blogs/networking-and-content-delivery/best-practices-for-deploying-gateway-load-balancer/) and [others](https://networkgeekstuff.com/networking/basic-load-balancer-scenarios-explained/) call this two-arm mode.)
-
-Unfortunately, unless they do decryption, firewalls can't filter on URL paths -- for example, you can't block all of github.com except for github.com/mycompany. The better vendors don’t seem to offer decryption; you’re probably better off using a proxy (i.e., the previous option) if you want to filter on URL paths.
 
 The firewall must support Geneve encapsulation, be invulnerable to SNI spoofing, fast, reliable, not [susceptible to IP address mismatches](https://chasersystems.com/discriminat/faq/#are-the-out-of-band-dns-lookups-susceptible-to-ip-address-mismatches), and preferably perform NAT to eliminate the need for NAT Gateways, so building an open-source alternative is not easy.
 
@@ -223,10 +221,14 @@ AWS Billing Cost           | <span style="color:red">High</span>    | Low       
 Complexity*                | Medium                                 | <span style="color:red">High</span> | Medium                                | Low                                   | Medium
 Scalability*               | High                                   | High                                | High                                  | Low                                   | Medium
 Flexibility*               | High                                   | High                                | High                                  | Medium                                | <span style="color:red">Lowest</span>
-Filtering Granularity      | None                                   | FQDN or URL Path                    | FQDN                                 | None                                 | None
+Filtering Granularity      | None                                   | FQDN (or URL Path\*\*)              | FQDN (or URL Path\*\*)                                | None                                 | None
 Will Prevent Org Migration | False                                  | False                               | False                                 | <span style="color:red">True</span>   | False
 
 \* = YMMV
+
+\*\* = URL path is only available to filter on if MITM is performed.[^91512]
+
+[^91512]: See the ["Man-in-the-Middle" section](https://eng.lyft.com/internet-egress-filtering-of-services-at-lyft-72e99e29a4d9) of Lyft's post, for some thoughts around this.
 
 ## FAQ
 
