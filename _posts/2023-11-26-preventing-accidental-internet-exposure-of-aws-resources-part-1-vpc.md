@@ -98,7 +98,9 @@ See [the FAQ](#can-you-walk-through-the-cost-details-around-option-1) for a verb
 
 PrivateLink ([and VPC Peering](#why-is-vpc-peering-not-a-straightforward-option)) are mostly non-options.
 
-The reason for this is as follows. When you make an interface VPC endpoint with AWS PrivateLink, a "[requester-managed network interface](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/requester-managed-eni.html)" is created. The "requester" is AWS, as you can see by the mysterious `"727180483921"` account ID. If you try to disable "[Source/destination checking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#eni-basics)" (which ensures that the ENI is either the source or the destination of any traffic it receives), you will not be able to since AWS manages it. Thus, traffic destined for the Internet but sent to that network interface is dropped before it travels cross-account.
+The reason for this is as follows. When you make an interface VPC endpoint with AWS PrivateLink, a "[requester-managed network interface](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/requester-managed-eni.html)" is created with "[source/destination checking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#eni-basics)" enabled.[^84415] Due to this check, traffic destined for the Internet but sent to that network interface is dropped before it travels cross-account.
+
+[^84415]: The "requester" is AWS, as you can see by [the mysterious `"727180483921"` account ID](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/requester-managed-eni.html). Since you do not manage it, you cannot disable the [source/destination checking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#eni-basics)
 
 However, suppose you are willing to do a lot of heavy lifting that is orthogonal to AWS primitives.
 

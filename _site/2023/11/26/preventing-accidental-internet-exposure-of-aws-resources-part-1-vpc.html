@@ -226,7 +226,7 @@
 
 <p>PrivateLink (<a href="#why-is-vpc-peering-not-a-straightforward-option">and VPC Peering</a>) are mostly non-options.</p>
 
-<p>The reason for this is as follows. When you make an interface VPC endpoint with AWS PrivateLink, a “<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/requester-managed-eni.html">requester-managed network interface</a>” is created. The “requester” is AWS, as you can see by the mysterious <code class="language-plaintext highlighter-rouge">"727180483921"</code> account ID. If you try to disable “<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#eni-basics">Source/destination checking</a>” (which ensures that the ENI is either the source or the destination of any traffic it receives), you will not be able to since AWS manages it. Thus, traffic destined for the Internet but sent to that network interface is dropped before it travels cross-account.</p>
+<p>The reason for this is as follows. When you make an interface VPC endpoint with AWS PrivateLink, a “<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/requester-managed-eni.html">requester-managed network interface</a>” is created with “<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#eni-basics">source/destination checking</a>” enabled.<sup id="fnref:84415" role="doc-noteref"><a href="#fn:84415" class="footnote" rel="footnote">3</a></sup> Due to this check, traffic destined for the Internet but sent to that network interface is dropped before it travels cross-account.</p>
 
 <p>However, suppose you are willing to do a lot of heavy lifting that is orthogonal to AWS primitives.</p>
 
@@ -237,14 +237,14 @@
   <li>Significant effort</li>
   <li>It won’t be possible for all subaccount types, such as sandbox accounts. (Where requiring <code class="language-plaintext highlighter-rouge">iptables</code> and a proxy are too heavyweight.)</li>
   <li>Egress filtering is a lower priority than preventing accidental Internet-exposure. So, tightly coupling the two and needing to set up a proxy first may not make strategic sense.</li>
-  <li>If something goes wrong on the host, the lost traffic will not appear in VPC flow logs <sup id="fnref:98" role="doc-noteref"><a href="#fn:98" class="footnote" rel="footnote">3</a></sup> or traffic mirroring logs.<sup id="fnref:985" role="doc-noteref"><a href="#fn:985" class="footnote" rel="footnote">4</a></sup> The DNS lookups will appear in Route53 query logs, but that’s it.</li>
+  <li>If something goes wrong on the host, the lost traffic will not appear in VPC flow logs <sup id="fnref:98" role="doc-noteref"><a href="#fn:98" class="footnote" rel="footnote">4</a></sup> or traffic mirroring logs.<sup id="fnref:985" role="doc-noteref"><a href="#fn:985" class="footnote" rel="footnote">5</a></sup> The DNS lookups will appear in Route53 query logs, but that’s it.</li>
 </ul>
 
-<p>With that said, AWS does not have a primitive to perform Egress filtering,<sup id="fnref:99" role="doc-noteref"><a href="#fn:99" class="footnote" rel="footnote">5</a></sup> so you will eventually have to implement Egress filtering via a proxy or a firewall. Therefore, in non-sandbox accounts, you could go with this option.</p>
+<p>With that said, AWS does not have a primitive to perform Egress filtering,<sup id="fnref:99" role="doc-noteref"><a href="#fn:99" class="footnote" rel="footnote">6</a></sup> so you will eventually have to implement Egress filtering via a proxy or a firewall. Therefore, in non-sandbox accounts, you could go with this option.</p>
 
 <h3 id="option-3-centralized-egress-via-gateway-load-balancer-gwlb-with-firewall">Option 3: Centralized Egress via Gateway Load Balancer (GWLB) with Firewall</h3>
 
-<p><a href="https://aws.amazon.com/blogs/aws/introducing-aws-gateway-load-balancer-easy-deployment-scalability-and-high-availability-for-partner-appliances/">GWLB</a> is a service intended to enable the deployment of virtual appliances in the form of firewalls, intrusion detection/prevention systems, and deep packet inspection systems. The appliances get sent the original traffic <a href="https://aws.amazon.com/blogs/networking-and-content-delivery/integrate-your-custom-logic-or-appliance-with-aws-gateway-load-balancer/">encapsulated via the Geneve protocol</a>.<sup id="fnref:99328" role="doc-noteref"><a href="#fn:99328" class="footnote" rel="footnote">6</a></sup></p>
+<p><a href="https://aws.amazon.com/blogs/aws/introducing-aws-gateway-load-balancer-easy-deployment-scalability-and-high-availability-for-partner-appliances/">GWLB</a> is a service intended to enable the deployment of virtual appliances in the form of firewalls, intrusion detection/prevention systems, and deep packet inspection systems. The appliances get sent the original traffic <a href="https://aws.amazon.com/blogs/networking-and-content-delivery/integrate-your-custom-logic-or-appliance-with-aws-gateway-load-balancer/">encapsulated via the Geneve protocol</a>.<sup id="fnref:99328" role="doc-noteref"><a href="#fn:99328" class="footnote" rel="footnote">7</a></sup></p>
 
 <p>In the <a href="#option-2-centralized-egress-via-privatelink-or-vpc-peering-with-proxy">previous section</a>, I wrote that PrivateLink was mostly a non-option because interface endpoint ENIs have  “<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#eni-basics">Source/destination checking</a>” enabled.</p>
 
@@ -255,11 +255,11 @@
 
 <p>The firewall must support Geneve encapsulation, be invulnerable to SNI spoofing, fast, reliable, not <a href="https://chasersystems.com/discriminat/faq/#are-the-out-of-band-dns-lookups-susceptible-to-ip-address-mismatches">susceptible to IP address mismatches</a>, and preferably perform NAT to eliminate the need for NAT Gateways, so building an open-source alternative is not easy.</p>
 
-<p>Regarding specific vendors, <a href="https://github.com/ChaserSystems/terraform-aws-discriminat-gwlb#deployment-examples">DiscrimiNAT</a> seems much easier to configure compared to e.g. Palo Alto Firewall,<sup id="fnref:99351" role="doc-noteref"><a href="#fn:99351" class="footnote" rel="footnote">7</a></sup> as all you do is <a href="https://chasersystems.com/docs/discriminat/aws/quick-start/#viii-configuring-a-whitelist">add FQDNs to security group descriptions</a>. However, DiscrimiNAT would need to add subaccount support for the diagram above to function to read the security groups in the ‘spoke’ account.</p>
+<p>Regarding specific vendors, <a href="https://github.com/ChaserSystems/terraform-aws-discriminat-gwlb#deployment-examples">DiscrimiNAT</a> seems much easier to configure compared to e.g. Palo Alto Firewall,<sup id="fnref:99351" role="doc-noteref"><a href="#fn:99351" class="footnote" rel="footnote">8</a></sup> as all you do is <a href="https://chasersystems.com/docs/discriminat/aws/quick-start/#viii-configuring-a-whitelist">add FQDNs to security group descriptions</a>. However, DiscrimiNAT would need to add subaccount support for the diagram above to function to read the security groups in the ‘spoke’ account.</p>
 
 <h3 id="option-4-vpc-sharing">Option 4: VPC Sharing</h3>
 
-<p>VPC Sharing is a tempting, simple, and little-known option.<sup id="fnref:996" role="doc-noteref"><a href="#fn:996" class="footnote" rel="footnote">8</a></sup></p>
+<p>VPC Sharing is a tempting, simple, and little-known option.<sup id="fnref:996" role="doc-noteref"><a href="#fn:996" class="footnote" rel="footnote">9</a></sup></p>
 
 <p>You can simply make a VPC in your networking account and share private subnets to subaccounts.</p>
 
@@ -267,10 +267,10 @@
 
 <p>The main problem is that there will <em>still be an Internet Gateway in the VPC</em>.</p>
 
-<p>Unless you also used one of the other options, like a TGW:<sup id="fnref:12202" role="doc-noteref"><a href="#fn:12202" class="footnote" rel="footnote">9</a></sup>
+<p>Unless you also used one of the other options, like a TGW:<sup id="fnref:12202" role="doc-noteref"><a href="#fn:12202" class="footnote" rel="footnote">10</a></sup>
 <img src="https://i.imgur.com/aYyKrH1.png" alt="alt text" /></p>
 
-<p>Assuming you don’t want to pay for TGW, you can ban actions that would explicitly give an instance in a private subnet a public IP.<sup id="fnref:220220" role="doc-noteref"><a href="#fn:220220" class="footnote" rel="footnote">10</a></sup></p>
+<p>Assuming you don’t want to pay for TGW, you can ban actions that would explicitly give an instance in a private subnet a public IP.<sup id="fnref:220220" role="doc-noteref"><a href="#fn:220220" class="footnote" rel="footnote">11</a></sup></p>
 
 <p>These actions are <a href="https://github.com/ScaleSec/terraform_aws_scp/blob/521ac29d712a6ebb51feb6f11b56e6c40b61bada/security_controls_scp/modules/ec2/deny_public_ec2_ip.tf#L5-L29"><code class="language-plaintext highlighter-rouge">ec2:RunInstances</code> with the <code class="language-plaintext highlighter-rouge">"ec2:AssociatePublicIpAddress</code> condition key set to <code class="language-plaintext highlighter-rouge">"true"</code></a> and EIP-related IAM actions such as <code class="language-plaintext highlighter-rouge">ec2:AssociateAddress</code>.</p>
 
@@ -297,7 +297,7 @@
 <p>If you are like most AWS customers:</p>
 <ul>
   <li>The Management Account of your AWS Organization has most of your resources in it</li>
-  <li>You want to follow Best Practices<sup id="fnref:996221" role="doc-noteref"><a href="#fn:996221" class="footnote" rel="footnote">11</a></sup> and have an empty Management Account</li>
+  <li>You want to follow Best Practices<sup id="fnref:996221" role="doc-noteref"><a href="#fn:996221" class="footnote" rel="footnote">12</a></sup> and have an empty Management Account</li>
   <li>It is infeasible to ‘empty’ out the current management account over time</li>
 </ul>
 
@@ -398,7 +398,7 @@
 
 <p>* = YMMV</p>
 
-<p>** = URL path is only available to filter on if MITM is performed.<sup id="fnref:91512" role="doc-noteref"><a href="#fn:91512" class="footnote" rel="footnote">12</a></sup></p>
+<p>** = URL path is only available to filter on if MITM is performed.<sup id="fnref:91512" role="doc-noteref"><a href="#fn:91512" class="footnote" rel="footnote">13</a></sup></p>
 
 <h2 id="faq">FAQ</h2>
 
@@ -563,13 +563,13 @@
 
 <p>As for why it cannot respond to traffic, that is more interesting!</p>
 
-<p>For a private subnet, the route table – which is only consulted for outgoing traffic – will have a path to a NAT Gateway, not the IGW. So response packets will reach the NAT Gateway, <a href="https://www.youtube.com/watch?app=desktop&amp;v=UP7wDBjZ37o&amp;t=35m20s">which does connection/flow tracking</a>,<sup id="fnref:91426" role="doc-noteref"><a href="#fn:91426" class="footnote" rel="footnote">13</a></sup> and get dropped because there is no existing connection.<sup id="fnref:9133" role="doc-noteref"><a href="#fn:9133" class="footnote" rel="footnote">14</a></sup></p>
+<p>For a private subnet, the route table – which is only consulted for outgoing traffic – will have a path to a NAT Gateway, not the IGW. So response packets will reach the NAT Gateway, <a href="https://www.youtube.com/watch?app=desktop&amp;v=UP7wDBjZ37o&amp;t=35m20s">which does connection/flow tracking</a>,<sup id="fnref:91426" role="doc-noteref"><a href="#fn:91426" class="footnote" rel="footnote">14</a></sup> and get dropped because there is no existing connection.<sup id="fnref:9133" role="doc-noteref"><a href="#fn:9133" class="footnote" rel="footnote">15</a></sup></p>
 
 <p>If the EC2 has UDP ports open, an attacker can receive responses, and you have a security problem. (A NACL will not help, as an Ingress deny rule blocking the Internet from hitting the EC2 will also block responses from the Internet to Egress Traffic.)</p>
 
 <h2 id="conclusion">Conclusion</h2>
 
-<p>Let me know how it goes limiting your Internet-exposed attack surface in an easy to understand, secure-by-default way.<sup id="fnref:92442" role="doc-noteref"><a href="#fn:92442" class="footnote" rel="footnote">15</a></sup></p>
+<p>Let me know how it goes limiting your Internet-exposed attack surface in an easy to understand, secure-by-default way.<sup id="fnref:92442" role="doc-noteref"><a href="#fn:92442" class="footnote" rel="footnote">16</a></sup></p>
 
 <p>You might still get breached, but hopefully in a more interesting way.</p>
 
@@ -583,6 +583,9 @@
     </li>
     <li id="fn:1350" role="doc-endnote">
       <p>Some companies with agents meant to be deployed on EC2s do not offer a VPC endpoint or charge an exorbitant fee to use one; <a href="https://sso.tax/">perhaps</a> a <a href="https://fido.fail/">wall</a> of <a href="https://github.com/SummitRoute/imdsv2_wall_of_shame#imdsv2-wall-of-shame">shame</a> can be made. Chime <a href="https://medium.com/life-at-chime/how-we-reduced-our-aws-bill-by-seven-figures-5144206399cb">mentioned</a>: <code class="language-plaintext highlighter-rouge">"Although our vendor offers PrivateLink, they have also chosen to monetize it, charging so much for access to the feature that it was not a viable option."</code> <a href="#fnref:1350" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:84415" role="doc-endnote">
+      <p>The “requester” is AWS, as you can see by <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/requester-managed-eni.html">the mysterious <code class="language-plaintext highlighter-rouge">"727180483921"</code> account ID</a>. Since you do not manage it, you cannot disable the <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#eni-basics">source/destination checking</a> <a href="#fnref:84415" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
     </li>
     <li id="fn:98" role="doc-endnote">
       <p><a href="https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html#flow-logs-limitations">Flow log limitations</a> do not state “Internet-bound traffic sent to a peering connection” or “Internet-bound traffic sent to a VPC interface endpoint.” under <code class="language-plaintext highlighter-rouge">The following types of traffic are not logged:</code>. After testing, I believe these are likely omitted due to not being a proper use-case. <a href="#fnref:98" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
