@@ -10,7 +10,7 @@ title: "Preventing Accidental Internet-Exposure of AWS Resources (Part 1: VPC)"
 
 There are many ways to make resources public in AWS. [github.com/SummitRoute/aws_exposable_resources](https://github.com/SummitRoute/aws_exposable_resources#aws-exposable-resources) was created specifically to maintain a list of all AWS resources that can be publicly exposed and how. Here, we will focus on network access.
 
-Preventing public network access to AWS resources is vital because without network access – all an attacker can leverage is the AWS API – making this arguably the highest ROI attack surface reduction you can make.
+Preventing public network access to AWS resources is essential because without network access – all an attacker can leverage is the AWS API – making this arguably the highest ROI attack surface reduction you can make.
 
 This first post discusses resources exclusively in a VPC (EC2 instances, ELBs, RDS databases, etc.).
 
