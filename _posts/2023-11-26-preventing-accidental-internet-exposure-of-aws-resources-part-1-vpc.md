@@ -323,7 +323,7 @@ Use [SSM](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-m
 
 [Chaser Systems has a good "pros- and cons-" bakeoff](https://chasersystems.com/blog/proxy-on-gcp-harder-better-faster-stronger/#maybe-a-proxy-less-solution) between the 2 types, but it only compares DiscrimiNAT and Squid.
 
-Overall, there is a dearth of information about baking off specific solutions. I would love to see someone write a post around this.
+Overall, there is a lack of information about baking off specific solutions. I would love to see someone write a post around this.
 
 The options I know about are as follows.
 
