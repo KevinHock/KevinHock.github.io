@@ -263,7 +263,7 @@ _Note: This assumes US East, 100 VPCs, and 3 AZs. If you want to change these va
 
 **Hourly Costs**
 
-> 1 NAT Gateway: $98.61 a month
+> 1 NAT Gateway: $98.61 per month
 
 > 1 Transit Gateway: with (100 + 1) VPC attachments, at 0.05 [per hour](https://aws.amazon.com/transit-gateway/pricing/). 101 * 730.48 * 0.05  = $3,688.92 per month.
 
@@ -273,7 +273,7 @@ _Note: This assumes US East, 100 VPCs, and 3 AZs. If you want to change these va
 
 > Same as the above + the TGW data processing charge.
 
-> At $0.02 [per GB of data processed](https://aws.amazon.com/transit-gateway/pricing/), that is only 20 bucks per TB of data!
+> At $0.02 [per GB of data processed](https://aws.amazon.com/transit-gateway/pricing/), that is only 20 bucks per TB of data.
 
 > In conclusion, for centralized egress to cost more, you’d need to send more than 303.67 TB.
 
